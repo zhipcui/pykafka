@@ -78,7 +78,8 @@ class SimpleConsumer(object):
                  generation_id=-1,
                  consumer_id=b'',
                  deserializer=None,
-                 reset_offset_on_fetch=True):
+                 reset_offset_on_fetch=True,
+                 **kwargs):
         """Create a SimpleConsumer.
 
         Settings and default values are taken from the Scala

@@ -56,14 +56,19 @@ class RdKafkaSimpleConsumer(SimpleConsumer):
                  generation_id=-1,
                  consumer_id=b'',
                  deserializer=None,
-                 reset_offset_on_fetch=True):
+                 reset_offset_on_fetch=True,
+                 **kwargs):
         callargs = {k: v for k, v in vars().items()
-                         if k not in ("self", "__class__")}
+                         if k not in ("self", "__class__", "kwargs")}
+        callargs.update(kwargs)
+
         self._rdk_consumer = None
         self._poller_thread = None
         self._stop_poller_thread = cluster.handler.Event()
         self._broker_version = cluster._broker_version
         self._fetch_error_backoff_ms = valid_int(fetch_error_backoff_ms)
+
+        self._rdk_config_args = kwargs
         # super() must come last for the case where auto_start=True
         super(RdKafkaSimpleConsumer, self).__init__(**callargs)
 
@@ -194,6 +199,9 @@ class RdKafkaSimpleConsumer(SimpleConsumer):
             self._setup_fetch_workers()
             log.debug("Restarted _rdk_consumer.")
 
+    def _convert_rdk_config_args(self):
+        return {k.replace("_", "."): v for k, v in self._rdk_config_args}
+
     def _mk_rdkafka_config_lists(self):
         """Populate conf, topic_conf to configure the rdkafka consumer"""
         # For documentation purposes, all consumer-relevant settings (all those
@@ -264,6 +272,9 @@ class RdKafkaSimpleConsumer(SimpleConsumer):
             # instances to the kafka cluster:
             ##"group.id"
             }
+
+        conf.update(self._convert_rdk_config_args())
+
         # broker.version.fallback is incompatible with >-0.10
         if not ver10:
             conf["broker.version.fallback"] = self._broker_version
